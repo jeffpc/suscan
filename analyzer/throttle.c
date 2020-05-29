@@ -51,56 +51,32 @@ SUSCOUNT
 suscan_throttle_get_portion(suscan_throttle_t *throttle, SUSCOUNT h)
 {
   struct timespec sleep_time;
-  uint64_t tn;
-  uint64_t sub;
-  SUSCOUNT samps;
-  SUSDIFF  nsecs;
-  SUSDIFF  avail;
-  SUBOOL  retry;
+  int64_t delay;
+  uint64_t now;
 
-  if (h > 0) {
-    do {
-      retry = SU_FALSE;
-      tn = suscan_gettime_raw();
+  if (!h)
+    return 0;
 
-      sub = tn - throttle->t0;
+  /*
+   * At this point, we are (now-t0) after the last return and we processed
+   * samp_count samples.  We can calculate when this return should occur,
+   * and sleep as necessary.
+   */
 
-      if (sub > SUSCAN_THROTTLE_LATE_READER_THRESHOLD_NS) {
-        /* Reader is really late, get a rough estimate */
-        avail = throttle->samp_rate * (sub / 1000000000ull) - throttle->samp_count;
-      } else {
-        nsecs = sub;
-        avail = (throttle->samp_rate * nsecs) / 1000000000ll
-            - throttle->samp_count;
-      }
+  now = suscan_gettime_raw();
+  delay = ((throttle->samp_count + h) * 1000000000ull / throttle->samp_rate) - (now - throttle->t0);
 
-      if (avail == 0) {
-        /*
-         * Stream exhausted. We wait a fraction of the time it would take
-         * for h samples to be available, then we try again.
-         */
-        throttle->samp_count = 0;
-        throttle->t0 = tn;
+  if (delay > 500) {
+    sleep_time.tv_sec = delay / 1000000000ull;
+    sleep_time.tv_nsec = delay % 1000000000ull;
 
-        samps = SUSCAN_THROTTLE_MAX_READ_UNIT_FRAC * h;
-        nsecs = (samps * 1000000000) / throttle->samp_rate;
+    nanosleep(&sleep_time, NULL);
+  }
 
-        sleep_time.tv_sec  = nsecs / 1000000000;
-        sleep_time.tv_nsec = nsecs % 1000000000;
-
-        (void) nanosleep(&sleep_time, NULL);
-
-        retry = SU_TRUE;
-      } else {
-        /* Check to avoid slow readers to overflow the available counter */
-        if (avail > SUSCAN_THROTTLE_RESET_THRESHOLD) {
-          throttle->samp_count = 0;
-          throttle->t0 = tn;
-        }
-
-        h = MIN(avail, h);
-      }
-    } while (retry);
+  /* Check to avoid slow readers to overflow the available counter */
+  if (throttle->samp_count > SUSCAN_THROTTLE_RESET_THRESHOLD) {
+    throttle->samp_count = 0;
+    throttle->t0 = now;
   }
 
   return h;

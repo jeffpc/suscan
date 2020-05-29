@@ -253,21 +253,12 @@ suscan_source_channel_wk_cb(
   if ((got = suscan_source_read(
       analyzer->source,
       analyzer->read_buf,
-      read_size)) > 0) {
+      analyzer->read_size)) > 0) {
+
     suscan_analyzer_process_start(analyzer);
 
     if (analyzer->iq_rev)
       suscan_analyzer_do_iq_rev(analyzer->read_buf, got);
-
-    if (!suscan_analyzer_is_real_time(analyzer)) {
-      SU_TRYCATCH(
-          pthread_mutex_lock(&analyzer->throttle_mutex) != -1,
-          goto done);
-      suscan_throttle_advance(&analyzer->throttle, got);
-      SU_TRYCATCH(
-          pthread_mutex_unlock(&analyzer->throttle_mutex) != -1,
-          goto done);
-    }
 
     SU_TRYCATCH(
         suscan_analyzer_feed_baseband_filters(
@@ -323,6 +314,22 @@ suscan_source_channel_wk_cb(
     SU_TRYCATCH(
         suscan_analyzer_feed_inspectors(analyzer, analyzer->read_buf, got),
         goto done);
+
+    /*
+     * Throttle non-realtime sources.  We throttle here after everything
+     * finished (the I/O and the processing) since a non-trivial amount of
+     * time may have passed between when this function got called and now.
+     */
+    if (!suscan_analyzer_is_real_time(analyzer)) {
+      SU_TRYCATCH(
+          pthread_mutex_lock(&analyzer->throttle_mutex) != -1,
+          goto done);
+      suscan_throttle_get_portion(&analyzer->throttle, got);
+      suscan_throttle_advance(&analyzer->throttle, got);
+      SU_TRYCATCH(
+          pthread_mutex_unlock(&analyzer->throttle_mutex) != -1,
+          goto done);
+    }
 
   } else {
     analyzer->eos = SU_TRUE;

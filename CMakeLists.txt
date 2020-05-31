@@ -95,8 +95,8 @@ endif()
 set(CMAKE_C_FLAGS_DEBUG   "${CMAKE_C_FLAGS_DEBUG} -O0 -ggdb")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3 -ffast-math -DNDEBUG")
 
-set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s")
-set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -s")
+#set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s")
+#set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -s")
 
 # Fix for MacOS X broken libxml2 Homebrew installation in MacOS Catalina
 if(APPLE)
@@ -174,6 +174,7 @@ set(ANALYZER_LIB_HEADERS
   ${ANALYZERDIR}/spectsrc.h
   ${ANALYZERDIR}/worker.h
   ${ANALYZERDIR}/estimator.h
+  ${ANALYZERDIR}/sink.h
   ${ANALYZERDIR}/source.h
   ${ANALYZERDIR}/symbuf.h
   ${ANALYZERDIR}/mq.h
@@ -206,6 +207,9 @@ set(ANALYZER_LIB_SOURCES
   ${ANALYZERDIR}/insp-server.c
   ${ANALYZERDIR}/mq.c
   ${ANALYZERDIR}/msg.c
+  ${ANALYZERDIR}/sink.c
+  ${ANALYZERDIR}/sink/cbor.c
+  ${ANALYZERDIR}/sink/ogg.c
   ${ANALYZERDIR}/slow.c
   ${ANALYZERDIR}/source.c
   ${ANALYZERDIR}/spectsrc.c

@@ -67,4 +67,10 @@ suscan_gettime(void)
   return suscan_gettime_helper(CLOCK_MONOTONIC);
 }
 
+SUINLINE uint64_t
+suscan_gettime_unix(void)
+{
+  return suscan_gettime_helper(CLOCK_REALTIME);
+}
+
 #endif
